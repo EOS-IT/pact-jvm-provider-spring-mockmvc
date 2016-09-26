@@ -16,9 +16,16 @@ import au.com.dius.pact.model.PactReader;
 
 import static com.google.common.collect.Lists.newArrayList;
 
+/**
+ * Utility class providing functionality to access pact files and converting the contents to {@link Pact}s.
+ */
 public class PactLoader {
 
     private static final String FILE_EXTENSION = ".json";
+    
+    private PactLoader() {
+		// Not intended to instantiate utility class
+	}
 
     /**
      * Loads the {@link Pact} from the given <code>pactResource</code>. The

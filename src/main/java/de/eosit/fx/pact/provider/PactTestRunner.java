@@ -1,6 +1,7 @@
 package de.eosit.fx.pact.provider;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -10,9 +11,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.result.HeaderResultMatchers;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+
+import com.google.common.collect.Sets;
 
 import au.com.dius.pact.model.Interaction;
+import au.com.dius.pact.model.OptionalBody;
 import au.com.dius.pact.model.Pact;
+import au.com.dius.pact.model.RequestResponseInteraction;
+import au.com.dius.pact.model.Response;
 
 import static com.google.common.collect.Sets.newHashSet;
 
@@ -59,7 +67,7 @@ public class PactTestRunner {
                     .orElseThrow(() -> new IllegalStateException("A MockMvc must be provided to perform the request."));
 
             ResultActions response = server.perform(request.get());
-            Set<ResultMatcher> responseMatchers = ConversionUtils.responseMatchers(interaction.orElse(null));
+            Set<ResultMatcher> responseMatchers = responseMatchers(interaction.orElse(null));
             responseMatchers.addAll(resultMatchers);
 
             for (ResultMatcher matcher : responseMatchers) {
@@ -164,5 +172,42 @@ public class PactTestRunner {
         }
 
         return ConversionUtils.getInteraction(pactStream, state);
+    }
+
+    protected Set<ResultMatcher> responseMatchers(Interaction interaction) {
+        RequestResponseInteraction reqResInteraction;
+        if (interaction instanceof RequestResponseInteraction) {
+            reqResInteraction = (RequestResponseInteraction) interaction;
+        } else {
+            return Sets.newHashSet();
+        }
+
+        Response response = reqResInteraction.getResponse();
+        if (response == null) {
+            return Sets.newHashSet();
+        }
+
+        return responseMatchers(response);
+    }
+
+    protected Set<ResultMatcher> responseMatchers(Response response) {
+        Set<ResultMatcher> result = Sets.newHashSet();
+
+        if (response.getStatus() != null) {
+            result.add(MockMvcResultMatchers.status().is(response.getStatus()));
+        }
+
+        OptionalBody body = response.getBody();
+        if (body.isPresent()) {
+            result.add(MockMvcResultMatchers.content().json(body.getValue()));
+        }
+
+        Map<String, String> headers = response.getHeaders();
+        if (headers != null && !headers.isEmpty()) {
+            HeaderResultMatchers headerMatchers = MockMvcResultMatchers.header();
+            headers.entrySet().stream().forEach(e -> result.add(headerMatchers.string(e.getKey(), e.getValue())));
+        }
+
+        return result;
     }
 }

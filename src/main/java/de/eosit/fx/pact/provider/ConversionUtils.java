@@ -1,76 +1,70 @@
 package de.eosit.fx.pact.provider;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
-import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.test.web.servlet.result.HeaderResultMatchers;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
-
-import com.google.common.collect.Sets;
-
 import au.com.dius.pact.model.Interaction;
-import au.com.dius.pact.model.OptionalBody;
 import au.com.dius.pact.model.Pact;
-import au.com.dius.pact.model.RequestResponseInteraction;
-import au.com.dius.pact.model.Response;
 
+/**
+ * Utility class providing functionality to extract an {@link Interaction} from
+ * a collection of {@link Pact}s.
+ */
 public class ConversionUtils {
 
-    public static Optional<Interaction> getInteraction(Collection<Pact> pacts, String providerState) {
-        if (pacts == null) {
-            return Optional.empty();
-        }
+	private ConversionUtils() {
+		// Not intended to instantiate utility class
+	}
 
-        return getInteraction(pacts.stream(), providerState);
-    }
+	/**
+	 * Retrieve the first {@link Interaction} from the collection of
+	 * {@link Pact}s that matches the given <code>providerState</code>. If no
+	 * pacts are given or no {@link Interaction} among the pacts matches the
+	 * given <code>providerState</code> an empty {@link Optional} is returned.
+	 * If multiple {@link Interaction}s match the given
+	 * <code>providerState</code> the first one (arbitrary) is returned.
+	 * 
+	 * @param pacts
+	 *            The {@link Collection} of {@link Pact}s to get the matching
+	 *            {@link Interaction} from.
+	 * @param providerState
+	 *            The provider state to match.
+	 * @return Returns an {@link Optional} containing the matching
+	 *         {@link Interaction} or an empty {@link Optional} in case of no
+	 *         match.
+	 */
+	public static Optional<Interaction> getInteraction(Collection<Pact> pacts, String providerState) {
+		if (pacts == null) {
+			return Optional.empty();
+		}
 
-    public static Optional<Interaction> getInteraction(Stream<Pact> pactStream, String providerState) {
-        if (providerState == null) {
-            return Optional.empty();
-        }
+		return getInteraction(pacts.stream(), providerState);
+	}
 
-        return pactStream.flatMap(pact -> pact.getInteractions().stream())
-                .filter(interaction -> providerState.equals(interaction.getProviderState())).findFirst();
-    }
+	/**
+	 * Retrieve the first {@link Interaction} from the stream of {@link Pact}s
+	 * that matches the given <code>providerState</code>. If no pacts are given
+	 * or no {@link Interaction} among the pacts matches the given
+	 * <code>providerState</code> an empty {@link Optional} is returned. If
+	 * multiple {@link Interaction}s match the given <code>providerState</code>
+	 * the first one (arbitrary) is returned.
+	 * 
+	 * @param pactStream
+	 *            The {@link Stream} of {@link Pact}s to get the matching
+	 *            {@link Interaction} from.
+	 * @param providerState
+	 *            The provider state to match.
+	 * @return Returns an {@link Optional} containing the matching
+	 *         {@link Interaction} or an empty {@link Optional} in case of no
+	 *         match.
+	 */
+	public static Optional<Interaction> getInteraction(Stream<Pact> pactStream, String providerState) {
+		if (providerState == null) {
+			return Optional.empty();
+		}
 
-    public static Set<ResultMatcher> responseMatchers(Interaction interaction) {
-        RequestResponseInteraction reqResInteraction;
-        if (interaction instanceof RequestResponseInteraction) {
-            reqResInteraction = (RequestResponseInteraction) interaction;
-        } else {
-            return Sets.newHashSet();
-        }
-
-        Response response = reqResInteraction.getResponse();
-        if (response == null) {
-            return Sets.newHashSet();
-        }
-
-        return responseMatchers(response);
-    }
-
-    public static Set<ResultMatcher> responseMatchers(Response response) {
-        Set<ResultMatcher> result = Sets.newHashSet();
-
-        if (response.getStatus() != null) {
-            result.add(MockMvcResultMatchers.status().is(response.getStatus()));
-        }
-
-        OptionalBody body = response.getBody();
-        if (body.isPresent()) {
-            result.add(MockMvcResultMatchers.content().json(body.getValue()));
-        }
-
-        Map<String, String> headers = response.getHeaders();
-        if (headers != null && !headers.isEmpty()) {
-            HeaderResultMatchers headerMatchers = MockMvcResultMatchers.header();
-            headers.entrySet().stream().forEach(e -> result.add(headerMatchers.string(e.getKey(), e.getValue())));
-        }
-
-        return result;
-    }
+		return pactStream.flatMap(pact -> pact.getInteractions().stream())
+				.filter(interaction -> providerState.equals(interaction.getProviderState())).findFirst();
+	}
 }
