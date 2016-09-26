@@ -1,0 +1,16 @@
+.gradle/
+bin/
+build/
+
+.classpath
+.project
+.settings/
+
+*~
+*#
+
+.build.gradle.*
+target/
+gitInfo.properties
+
+.idea/

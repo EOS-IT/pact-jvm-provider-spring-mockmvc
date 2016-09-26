@@ -1,0 +1,86 @@
+buildscript {
+	ext {
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'jacoco'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
+apply plugin: 'idea'
+
+sourceCompatibility = 1.8
+
+jacoco {
+	toolVersion = "0.7.6.201602180812"
+}
+
+repositories {
+	mavenLocal()
+	mavenCentral()
+}
+
+dependencies {
+	compile("au.com.dius:pact-jvm-model:3.3.0")
+	compile("com.google.guava:guava:19.0")
+    compile("junit:junit:4.12")
+    compile("org.springframework:spring-test:4.3.3.RELEASE")
+    compile("org.springframework:spring-web:4.3.3.RELEASE")
+    compile("javax.servlet:javax.servlet-api:3.1.0")
+}
+
+jar {
+	manifest {
+		attributes('Implementation-Title': project.name,
+				   'Implementation-Version': version,
+				   'Build-By': System.getProperty('user.name'),
+				   'Build-No': System.getenv().BUILD_NUMBER?.toInteger() ?: 'local build',
+				   'Git-branch': System.getenv().GIT_BRANCH ?: 'local build',
+				   'Git-commit': System.getenv().GIT_COMMIT ?: 'local build',
+				   'Build-Date': new Date(),
+				   'Build-JDK': System.getProperty('java.version'),
+				   'Build-Gradle': gradle.gradleVersion  
+		)
+	}
+}		
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
+publishing {
+    ext.nexusUrl = project.hasProperty('nexusUrl') ? project.getProperty('nexusUrl') : ''
+    ext.nexusUser = project.hasProperty('nexusUser') ? project.getProperty('nexusUser') : 'noone'
+    ext.nexusPassword = project.hasProperty('nexusPassword') ? project.getProperty('nexusPassword') : ''
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact sourceJar {
+                classifier "sources"
+            }
+        }
+    }
+    repositories {
+        maven {
+	        credentials {
+	            username "${nexusUser}"
+	            password "${nexusPassword}"
+	        }
+            url "${nexusUrl}"
+        }
+    }
+}
+
+eclipse {
+   classpath {
+	   containers.remove('org.eclipse.jdt.launching.JRE_CONTAINER')
+	   containers 'org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8'
+   }
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
