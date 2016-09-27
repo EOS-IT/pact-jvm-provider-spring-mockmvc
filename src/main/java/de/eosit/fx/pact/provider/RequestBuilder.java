@@ -1,10 +1,9 @@
 package de.eosit.fx.pact.provider;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.net.URLDecoder;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -19,8 +18,30 @@ import au.com.dius.pact.model.Interaction;
 import au.com.dius.pact.model.Request;
 import au.com.dius.pact.model.RequestResponseInteraction;
 
+/**
+ * Utility class converting pact classes into Springs
+ * {@link MockHttpServletRequestBuilder}. The
+ * {@link MockHttpServletRequestBuilder} can be used to build requests that can
+ * be executed against a mocked rest interface.
+ */
 public class RequestBuilder {
 
+    /**
+     * Creates a {@link MockHttpServletRequestBuilder} from the given
+     * {@link Interaction}. This method will only return a value if the
+     * interaction contains a {@link Request}. This means that the interaction
+     * must be a {@link RequestResponseInteraction}. If no valid request can be
+     * extracted from the interaction an empty {@link Optional} is returned.
+     *
+     * @param interaction
+     *            The {@link Interaction} to get the request from. The
+     *            {@link Request} is used to build the
+     *            {@link MockHttpServletRequestBuilder}.
+     * @return Returns an {@link Optional} of
+     *         {@link MockHttpServletRequestBuilder} containing the values from
+     *         the {@link Request}. In case no valid request is found, an empty
+     *         {@link Optional} is returned.
+     */
     public static Optional<MockHttpServletRequestBuilder> buildRequest(Interaction interaction) {
         RequestResponseInteraction reqResInteraction;
         if (interaction instanceof RequestResponseInteraction) {
@@ -38,9 +59,26 @@ public class RequestBuilder {
         return Optional.of(buildRequest(request));
     }
 
+    /**
+     * Creates a {@link MockHttpServletRequestBuilder} from the given
+     * {@link Request}.
+     *
+     * @param request
+     *            The {@link Request} to build the
+     *            {@link MockHttpServletRequestBuilder}.
+     * @return Returns a {@link MockHttpServletRequestBuilder} containing the
+     *         values from the {@link Request}. In case no request is given,
+     *         <code>null</code> is returned.
+     */
     public static MockHttpServletRequestBuilder buildRequest(Request request) {
-        UriComponents uriComponents = UriComponentsBuilder.fromUriString(decode(request.getPath()))
-                .query(decode(toQuery(request.getQuery()))).build();
+        if (request == null) {
+            return null;
+        }
+
+        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromUriString(request.getPath());
+        toQuery(request.getQuery(), uriBuilder);
+
+        UriComponents uriComponents = uriBuilder.build();
 
         return createBuilder(request, uriComponents);
     }
@@ -52,25 +90,13 @@ public class RequestBuilder {
         return builder;
     }
 
-    private static String toQuery(Map<String, List<String>> map) {
-        if (map == null) {
-            return null;
+    private static void toQuery(Map<String, List<String>> map, UriComponentsBuilder builder) {
+        if (map == null || builder == null) {
+            return;
         }
 
-        return map.entrySet().stream()
-                .map(e -> e.getKey() + "=" + e.getValue().stream().map(v -> decode(v)).collect(Collectors.joining(";")))
-                .collect(Collectors.joining("&"));
-    }
-
-    private static String decode(String s) {
-        if (s == null) {
-            return null;
-        }
-
-        try {
-            return URLDecoder.decode(s, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            return null;
+        for (Entry<String, List<String>> e : map.entrySet()) {
+            builder.queryParam(e.getKey(), e.getValue().toArray());
         }
     }
 
