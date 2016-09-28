@@ -42,7 +42,7 @@ import static com.google.common.collect.Sets.newHashSet;
  *     &#064;Test
  *     &#064;ProviderState("my provider state")
  *     public void testInteraction() throws Exception {
- *         pactRule.configure().setMockMvc(mockMvc).setContextPath("/app");
+ *         pactRule.configure().mockMvc(mockMvc).contextPath("/app");
  *     }
  * }
  * </pre>
@@ -82,8 +82,8 @@ public class PactMockMvcRule implements TestRule {
                 try {
                     base.evaluate();
 
-                    if (!runner.getProviderState().isPresent()) {
-                        runner.setProviderState(retrieveDefaultProviderState(description).orElse(null));
+                    if (!runner.providerState().isPresent()) {
+                        runner.providerState(retrieveDefaultProviderState(description).orElse(null));
                     }
 
                     runner.run();

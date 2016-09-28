@@ -36,11 +36,11 @@ import static com.google.common.collect.Sets.newHashSet;
 public class PactTestRunner {
 
     private Set<Pact> pacts = newHashSet();
-    private Optional<MockMvc> mockMvc = Optional.empty();
-    private Optional<String> consumer = Optional.empty();
-    private Optional<String> provider = Optional.empty();
-    private Optional<String> providerState = Optional.empty();
-    private Optional<String> contextPath = Optional.empty();
+    private MockMvc mockMvc = null;
+    private String consumer = null;
+    private String provider = null;
+    private String providerState = null;
+    private String contextPath = null;
     private Consumer<? super MockHttpServletRequestBuilder> requestCallback = null;
     private Set<ResultMatcher> resultMatchers = newHashSet();
     private Consumer<? super ResultActions> responseCallback = null;
@@ -84,26 +84,27 @@ public class PactTestRunner {
         Optional<Interaction> interaction = findInteraction();
 
         Optional<MockHttpServletRequestBuilder> request = RequestBuilder.buildRequest(interaction.orElse(null));
-        request.ifPresent(r -> r.contextPath(contextPath.orElse(null)));
+        request.ifPresent(r -> r.contextPath(contextPath().orElse(null)));
 
         if (requestCallback != null) {
             request.ifPresent(requestCallback);
         }
 
         if (request.isPresent()) {
-            MockMvc server = mockMvc
+            MockMvc server = mockMvc()
                     .orElseThrow(() -> new IllegalStateException("A MockMvc must be provided to perform the request."));
 
             ResultActions response = server.perform(request.get());
+
+            if (responseCallback != null) {
+                responseCallback.accept(response);
+            }
+
             Set<ResultMatcher> responseMatchers = responseMatchers(interaction.orElse(null));
             responseMatchers.addAll(resultMatchers);
 
             for (ResultMatcher matcher : responseMatchers) {
                 response.andExpect(matcher);
-            }
-
-            if (responseCallback != null) {
-                responseCallback.accept(response);
             }
         }
 
@@ -114,7 +115,7 @@ public class PactTestRunner {
      *
      * @return The availabe set of {@link Pact}s.
      */
-    public Set<Pact> getPacts() {
+    public Set<Pact> pacts() {
         return newHashSet(pacts);
     }
 
@@ -123,8 +124,8 @@ public class PactTestRunner {
      *
      * @return The configured consumer name for filtering purposes.
      */
-    public Optional<String> getConsumer() {
-        return consumer;
+    public Optional<String> consumer() {
+        return Optional.ofNullable(consumer);
     }
 
     /**
@@ -135,8 +136,8 @@ public class PactTestRunner {
      *            The name of the consumer to filter.
      * @return Returns the current {@link PactTestRunner}.
      */
-    public PactTestRunner setConsumer(String consumer) {
-        this.consumer = Optional.ofNullable(consumer);
+    public PactTestRunner consumer(String consumer) {
+        this.consumer = consumer;
         return this;
     }
 
@@ -145,8 +146,8 @@ public class PactTestRunner {
      *
      * @return The configured provider name for filtering purposes.
      */
-    public Optional<String> getProvider() {
-        return provider;
+    public Optional<String> provider() {
+        return Optional.ofNullable(provider);
     }
 
     /**
@@ -157,8 +158,8 @@ public class PactTestRunner {
      *            The name of the provider to filter.
      * @return Returns the current {@link PactTestRunner}.
      */
-    public PactTestRunner setProvider(String provider) {
-        this.provider = Optional.ofNullable(provider);
+    public PactTestRunner provider(String provider) {
+        this.provider = provider;
         return this;
     }
 
@@ -168,8 +169,8 @@ public class PactTestRunner {
      *
      * @return The configured provider state.
      */
-    public Optional<String> getProviderState() {
-        return providerState;
+    public Optional<String> providerState() {
+        return Optional.ofNullable(providerState);
     }
 
     /**
@@ -182,8 +183,8 @@ public class PactTestRunner {
      *            The provider state to get the interaction for.
      * @return Returns the current {@link PactTestRunner}.
      */
-    public PactTestRunner setProviderState(String providerState) {
-        this.providerState = Optional.ofNullable(providerState);
+    public PactTestRunner providerState(String providerState) {
+        this.providerState = providerState;
         return this;
     }
 
@@ -192,8 +193,8 @@ public class PactTestRunner {
      *
      * @return The configured {@link MockMvc}.
      */
-    public Optional<MockMvc> getMockMvc() {
-        return mockMvc;
+    public Optional<MockMvc> mockMvc() {
+        return Optional.ofNullable(mockMvc);
     }
 
     /**
@@ -204,8 +205,8 @@ public class PactTestRunner {
      *            The {@link MockMvc} to use for executing the requests.
      * @return Returns the current {@link PactTestRunner}.
      */
-    public PactTestRunner setMockMvc(MockMvc mockMvc) {
-        this.mockMvc = Optional.ofNullable(mockMvc);
+    public PactTestRunner mockMvc(MockMvc mockMvc) {
+        this.mockMvc = mockMvc;
         return this;
     }
 
@@ -214,8 +215,8 @@ public class PactTestRunner {
      *
      * @return The configured context path.
      */
-    public Optional<String> getContextPath() {
-        return contextPath;
+    public Optional<String> contextPath() {
+        return Optional.ofNullable(contextPath);
     }
 
     /**
@@ -226,8 +227,8 @@ public class PactTestRunner {
      *            The context path of the requests.
      * @return Returns the current {@link PactTestRunner}.
      */
-    public PactTestRunner setContextPath(String contextPath) {
-        this.contextPath = Optional.ofNullable(contextPath);
+    public PactTestRunner contextPath(String contextPath) {
+        this.contextPath = contextPath;
         return this;
     }
 
@@ -237,7 +238,7 @@ public class PactTestRunner {
      *
      * @return The configured request callback.
      */
-    public Consumer<? super MockHttpServletRequestBuilder> getRequestCallback() {
+    public Consumer<? super MockHttpServletRequestBuilder> requestCallback() {
         return requestCallback;
     }
 
@@ -249,7 +250,7 @@ public class PactTestRunner {
      *            The callback to use.
      * @return Returns the current {@link PactTestRunner}.
      */
-    public PactTestRunner setRequestCallback(Consumer<? super MockHttpServletRequestBuilder> requestCallback) {
+    public PactTestRunner requestCallback(Consumer<? super MockHttpServletRequestBuilder> requestCallback) {
         this.requestCallback = requestCallback;
         return this;
     }
@@ -260,7 +261,7 @@ public class PactTestRunner {
      *
      * @return The configured additional {@link ResultMatcher}s.
      */
-    public Set<ResultMatcher> getResultMatchers() {
+    public Set<ResultMatcher> resultMatchers() {
         return resultMatchers;
     }
 
@@ -298,7 +299,7 @@ public class PactTestRunner {
      *
      * @return The configured response callback.
      */
-    public Consumer<? super ResultActions> getResponseCallback() {
+    public Consumer<? super ResultActions> responseCallback() {
         return responseCallback;
     }
 
@@ -310,7 +311,7 @@ public class PactTestRunner {
      *            The callback to use.
      * @return Returns the current {@link PactTestRunner}.
      */
-    public PactTestRunner setResponseCallback(Consumer<? super ResultActions> responseCallback) {
+    public PactTestRunner responseCallback(Consumer<? super ResultActions> responseCallback) {
         this.responseCallback = responseCallback;
         return this;
     }
@@ -327,14 +328,18 @@ public class PactTestRunner {
      *             In case no provider state is configured.
      */
     protected Optional<Interaction> findInteraction() {
-        String state = providerState.orElseThrow(() -> new IllegalStateException(
+        String state = providerState().orElseThrow(() -> new IllegalStateException(
                 "No provider state defined. Set one explicitly or use the ProviderState annotation"));
 
         Stream<Pact> pactStream = pacts.stream();
 
+        Optional<String> provider = provider();
         if (provider.isPresent()) {
-            pactStream = pactStream.filter(pact -> provider.get().equals(pact.getProvider().getName()));
+            pactStream = pactStream.filter(pact -> {
+                return provider.get().equals(pact.getProvider().getName());
+            });
         }
+        Optional<String> consumer = consumer();
         if (consumer.isPresent()) {
             pactStream = pactStream.filter(pact -> consumer.get().equals(pact.getConsumer().getName()));
         }
