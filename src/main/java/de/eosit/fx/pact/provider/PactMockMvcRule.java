@@ -154,6 +154,11 @@ public class PactMockMvcRule implements TestRule {
             return this;
         }
 
+        public PactMockMvcRuleBuilder withPactSource(String pactSource) {
+            pacts.add(PactLoader.loadPactGeneric(pactSource));
+            return this;
+        }
+
         public PactMockMvcRuleBuilder forConsumer(String consumer) {
             this.consumer = Optional.ofNullable(consumer);
             return this;
