@@ -1,5 +1,6 @@
 package de.eosit.fx.pact.provider;
 
+import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -81,9 +82,9 @@ public class PactTestRunner {
      *             In case any error occurs during the execution.
      */
     public void run() throws Throwable {
-        Optional<Interaction> interaction = findInteraction();
+        Interaction interaction = findInteraction();
 
-        Optional<MockHttpServletRequestBuilder> request = RequestBuilder.buildRequest(interaction.orElse(null));
+        Optional<MockHttpServletRequestBuilder> request = RequestBuilder.buildRequest(interaction);
         request.ifPresent(r -> r.contextPath(contextPath().orElse(null)));
 
         if (requestCallback != null) {
@@ -100,7 +101,7 @@ public class PactTestRunner {
                 responseCallback.accept(response);
             }
 
-            Set<ResultMatcher> responseMatchers = responseMatchers(interaction.orElse(null));
+            Set<ResultMatcher> responseMatchers = responseMatchers(interaction);
             responseMatchers.addAll(resultMatchers);
 
             for (ResultMatcher matcher : responseMatchers) {
@@ -325,26 +326,30 @@ public class PactTestRunner {
      * @return The found {@link Interaction} or an empty {@link Optional} if no
      *         interaction matches the provider state.
      * @throws IllegalStateException
-     *             In case no provider state is configured.
+     *             In case no provider state is configured or if no interaction  for the provider state is found.
      */
-    protected Optional<Interaction> findInteraction() {
-        String state = providerState().orElseThrow(() -> new IllegalStateException(
+    protected Interaction findInteraction() {
+        final String state = providerState().orElseThrow(() -> new IllegalStateException(
                 "No provider state defined. Set one explicitly or use the ProviderState annotation"));
 
-        Stream<Pact> pactStream = pacts.stream();
+        final Stream<Pact> pactStream = pacts.stream()
+                .filter(this::matchingProviderName)
+                .filter(this::matchingConsumerName);
 
-        Optional<String> provider = provider();
-        if (provider.isPresent()) {
-            pactStream = pactStream.filter(pact -> {
-                return provider.get().equals(pact.getProvider().getName());
-            });
-        }
-        Optional<String> consumer = consumer();
-        if (consumer.isPresent()) {
-            pactStream = pactStream.filter(pact -> consumer.get().equals(pact.getConsumer().getName()));
-        }
+        return ConversionUtils.getInteraction(pactStream, state)
+                .orElseThrow(() -> new IllegalStateException(MessageFormat.format("No interaction found for state \"{0}\"", state)));
+    }
 
-        return ConversionUtils.getInteraction(pactStream, state);
+    private boolean matchingProviderName(Pact pact) {
+        return provider()
+                .map(expectedProviderName -> expectedProviderName.equals(pact.getProvider().getName()))
+                .orElse(true);
+    }
+
+    private boolean matchingConsumerName(Pact pact) {
+        return provider()
+                .map(expectedConsumerName -> expectedConsumerName.equals(pact.getConsumer().getName()))
+                .orElse(true);
     }
 
     /**
