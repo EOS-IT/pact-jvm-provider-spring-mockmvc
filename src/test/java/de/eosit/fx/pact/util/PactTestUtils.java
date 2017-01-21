@@ -1,12 +1,12 @@
 package de.eosit.fx.pact.util;
 
+import com.google.common.collect.Lists;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.UUID;
-
-import com.google.common.collect.Lists;
 
 public class PactTestUtils {
 
@@ -21,17 +21,18 @@ public class PactTestUtils {
     }
 
     public static String getRandomPact() {
-        return getPactString("a", "b", UUID.randomUUID().toString());
+        return getPactString("a", "b", UUID.randomUUID().toString(), UUID.randomUUID().toString());
     }
 
-    public static String getPactString(String provider, String consumer, String providerState) {
+    public static String getPactString(String provider, String consumer, String providerState, String description) {
         StringBuilder sb = new StringBuilder("{\"provider\": {\"name\": \"");
         sb.append(provider);
         sb.append("\"},\"consumer\": {\"name\": \"");
         sb.append(consumer);
         sb.append("b\"},");
-        sb.append(
-                "\"interactions\": [{\"description\": \"a dummy request\",\"request\": {\"method\": \"GET\",\"path\": \"/to/service\"},");
+        sb.append("\"interactions\": [{\"description\": \"");
+        sb.append(description);
+        sb.append("\",\"request\": {\"method\": \"GET\",\"path\": \"/to/service\"},");
         sb.append("\"response\": {\"status\": 200,\"body\": {}},\"providerState\": \"");
         sb.append(providerState);
         sb.append(

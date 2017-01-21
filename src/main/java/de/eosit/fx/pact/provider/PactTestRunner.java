@@ -1,13 +1,11 @@
 package de.eosit.fx.pact.provider;
 
-import java.text.MessageFormat;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
-
+import au.com.dius.pact.model.Interaction;
+import au.com.dius.pact.model.OptionalBody;
+import au.com.dius.pact.model.Pact;
+import au.com.dius.pact.model.RequestResponseInteraction;
+import au.com.dius.pact.model.Response;
+import com.google.common.collect.Sets;
 import org.junit.experimental.results.ResultMatchers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -16,20 +14,22 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.result.HeaderResultMatchers;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-import com.google.common.collect.Sets;
-
-import au.com.dius.pact.model.Interaction;
-import au.com.dius.pact.model.OptionalBody;
-import au.com.dius.pact.model.Pact;
-import au.com.dius.pact.model.RequestResponseInteraction;
-import au.com.dius.pact.model.Response;
+import java.text.MessageFormat;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.collect.Sets.newHashSet;
 
 /**
- * Instances of this class are responsible to verify a certain interaction
- * between a consumer and a producer. It is based on a set of {@link Pact}s from
- * which the {@link Interaction} is retrieved by the provider state. For this
+ * Instances of this class are responsible to verify interactions
+ * between a consumer and a producer for a specific provider state. It is based on a set of {@link Pact}s from
+ * which the {@link Interaction}s are retrieved by the provider state. For each
  * {@link Interaction} a spring mock mvc request is build from the interactions
  * request parameter. The request is sent to the provided {@link MockMvc} and
  * the response is validated against the response parameters of the interaction.
@@ -41,6 +41,7 @@ public class PactTestRunner {
     private String consumer = null;
     private String provider = null;
     private String providerState = null;
+    private String interactionDescription = null;
     private String contextPath = null;
     private Consumer<? super MockHttpServletRequestBuilder> requestCallback = null;
     private Set<ResultMatcher> resultMatchers = newHashSet();
@@ -49,8 +50,7 @@ public class PactTestRunner {
     /**
      * Constructor setting the available {@link Pact}s.
      *
-     * @param pacts
-     *            The available {@link Pact}s.
+     * @param pacts The available {@link Pact}s.
      */
     public PactTestRunner(Iterable<Pact> pacts) {
         if (pacts != null) {
@@ -61,8 +61,7 @@ public class PactTestRunner {
     /**
      * Constructor setting the available {@link Pact}.
      *
-     * @param pact
-     *            The available {@link Pact}.
+     * @param pact The available {@link Pact}.
      */
     public PactTestRunner(Pact pact) {
         if (pact != null) {
@@ -71,41 +70,42 @@ public class PactTestRunner {
     }
 
     /**
-     * This method does all the work. Depending on the parameters set, an
-     * {@link Interaction} is retrieved from the available {@link Pact}s and the
+     * This method does all the work. Depending on the parameters set, the
+     * {@link Interaction}s are retrieved from the available {@link Pact}s and for each the
      * described request is send to the {@link MockMvc}. The response is
      * validated against the response information from the {@link Interaction}.
      * Any configured callbacks will be called to intercept the execution
      * lifecycle.
      *
-     * @throws Throwable
-     *             In case any error occurs during the execution.
+     * @throws Throwable In case any error occurs during the execution.
      */
     public void run() throws Throwable {
-        Interaction interaction = findInteraction();
+        List<Interaction> interactions = findInteractions();
 
-        Optional<MockHttpServletRequestBuilder> request = RequestBuilder.buildRequest(interaction);
-        request.ifPresent(r -> r.contextPath(contextPath().orElse(null)));
+        for (Interaction interaction : interactions) {
+            Optional<MockHttpServletRequestBuilder> request = RequestBuilder.buildRequest(interaction);
+            request.ifPresent(r -> r.contextPath(contextPath().orElse(null)));
 
-        if (requestCallback != null) {
-            request.ifPresent(requestCallback);
-        }
-
-        if (request.isPresent()) {
-            MockMvc server = mockMvc()
-                    .orElseThrow(() -> new IllegalStateException("A MockMvc must be provided to perform the request."));
-
-            ResultActions response = server.perform(request.get());
-
-            if (responseCallback != null) {
-                responseCallback.accept(response);
+            if (requestCallback != null) {
+                request.ifPresent(requestCallback);
             }
 
-            Set<ResultMatcher> responseMatchers = responseMatchers(interaction);
-            responseMatchers.addAll(resultMatchers);
+            if (request.isPresent()) {
+                MockMvc server = mockMvc().orElseThrow(
+                        () -> new IllegalStateException("A MockMvc must be provided to perform the request."));
 
-            for (ResultMatcher matcher : responseMatchers) {
-                response.andExpect(matcher);
+                ResultActions response = server.perform(request.get());
+
+                if (responseCallback != null) {
+                    responseCallback.accept(response);
+                }
+
+                Set<ResultMatcher> responseMatchers = responseMatchers(interaction);
+                responseMatchers.addAll(resultMatchers);
+
+                for (ResultMatcher matcher : responseMatchers) {
+                    response.andExpect(matcher);
+                }
             }
         }
 
@@ -133,8 +133,7 @@ public class PactTestRunner {
      * Sets the consumer name to filter the {@link Pact}s. Set to
      * <code>null</code> to reset that filter and consider all {@link Pact}s.
      *
-     * @param consumer
-     *            The name of the consumer to filter.
+     * @param consumer The name of the consumer to filter.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner consumer(String consumer) {
@@ -155,8 +154,7 @@ public class PactTestRunner {
      * Sets the provider name to filter the {@link Pact}s. Set to
      * <code>null</code> to reset that filter and consider all {@link Pact}s.
      *
-     * @param provider
-     *            The name of the provider to filter.
+     * @param provider The name of the provider to filter.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner provider(String provider) {
@@ -165,7 +163,7 @@ public class PactTestRunner {
     }
 
     /**
-     * The provider state that is used to retrieve the {@link Interaction} from
+     * The provider state that is used to retrieve the {@link Interaction}s from
      * the available {@link Pact}s.
      *
      * @return The configured provider state.
@@ -175,17 +173,38 @@ public class PactTestRunner {
     }
 
     /**
-     * Sets the provider state to retrieve the {@link Interaction} from the
+     * Sets the provider state to retrieve the {@link Interaction}s from the
      * available {@link Pact}s. Set to <code>null</code> to reset that value,
      * but consider that a provider state is needed during execution to get the
-     * {@link Interaction}.
+     * {@link Interaction}s.
      *
-     * @param providerState
-     *            The provider state to get the interaction for.
+     * @param providerState The provider state to get the interactions for.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner providerState(String providerState) {
         this.providerState = providerState;
+        return this;
+    }
+
+    /**
+     * The interaction description that is used to retrieve the {@link Interaction} from
+     * the available {@link Pact}s.
+     *
+     * @return The configured interaction description.
+     */
+    public Optional<String> interactionDescription() {
+        return Optional.ofNullable(interactionDescription);
+    }
+
+    /**
+     * Sets the interaction description to retrieve the {@link Interaction} from the
+     * available {@link Pact}s. Set to <code>null</code> to reset that value.
+     *
+     * @param interactionDescription The interaction description to get the interaction for.
+     * @return Returns the current {@link PactTestRunner}.
+     */
+    public PactTestRunner interactionDescription(String interactionDescription) {
+        this.interactionDescription = interactionDescription;
         return this;
     }
 
@@ -202,8 +221,7 @@ public class PactTestRunner {
      * Sets the {@link MockMvc} to use for executing the request. This is
      * required during execution.
      *
-     * @param mockMvc
-     *            The {@link MockMvc} to use for executing the requests.
+     * @param mockMvc The {@link MockMvc} to use for executing the requests.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner mockMvc(MockMvc mockMvc) {
@@ -224,8 +242,7 @@ public class PactTestRunner {
      * Sets the context path to use for executing the requests. Set to
      * <code>null</code> to reset the context path.
      *
-     * @param contextPath
-     *            The context path of the requests.
+     * @param contextPath The context path of the requests.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner contextPath(String contextPath) {
@@ -247,8 +264,7 @@ public class PactTestRunner {
      * Sets the request callback to call during execution lifecycle to modify
      * the request before the request is sent.
      *
-     * @param requestCallback
-     *            The callback to use.
+     * @param requestCallback The callback to use.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner requestCallback(Consumer<? super MockHttpServletRequestBuilder> requestCallback) {
@@ -271,8 +287,7 @@ public class PactTestRunner {
      * response. These {@link ResultMatcher}s are verified additional to the
      * matchers generated from the pact response description.
      *
-     * @param resultMatchers
-     *            The additional {@link ResultMatcher}s to use.
+     * @param resultMatchers The additional {@link ResultMatcher}s to use.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner addResultMatchers(Collection<ResultMatcher> resultMatchers) {
@@ -285,8 +300,7 @@ public class PactTestRunner {
      * response. These {@link ResultMatcher}s are verified additional to the
      * matchers generated from the pact response description.
      *
-     * @param resultMatchers
-     *            The additional {@link ResultMatcher}s to use.
+     * @param resultMatchers The additional {@link ResultMatcher}s to use.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner addResultMatchers(ResultMatcher... resultMatchers) {
@@ -308,8 +322,7 @@ public class PactTestRunner {
      * Sets the response callback to call during execution lifecycle to access
      * the response of the call.
      *
-     * @param responseCallback
-     *            The callback to use.
+     * @param responseCallback The callback to use.
      * @return Returns the current {@link PactTestRunner}.
      */
     public PactTestRunner responseCallback(Consumer<? super ResultActions> responseCallback) {
@@ -318,45 +331,46 @@ public class PactTestRunner {
     }
 
     /**
-     * Find the interaction from the available {@link Pact}s by first applying
+     * Find the interactions from the available {@link Pact}s by first applying
      * any configured consumer / provider filter and then determine the
-     * {@link Interaction} from the remaining {@link Pact}s by the provider
+     * {@link Interaction}s from the remaining {@link Pact}s by the provider
      * state.
      *
-     * @return The found {@link Interaction} or an empty {@link Optional} if no
-     *         interaction matches the provider state.
-     * @throws IllegalStateException
-     *             In case no provider state is configured or if no interaction  for the provider state is found.
+     * @return The found {@link Interaction}s.
+     * @throws IllegalStateException In case no provider state is configured or if no interactions for the provider state are found.
      */
-    protected Interaction findInteraction() {
-        final String state = providerState().orElseThrow(() -> new IllegalStateException(
+    protected List<Interaction> findInteractions() {
+        providerState().orElseThrow(() -> new IllegalStateException(
                 "No provider state defined. Set one explicitly or use the ProviderState annotation"));
 
-        final Stream<Pact> pactStream = pacts.stream()
-                .filter(this::matchingProviderName)
+        final Stream<Pact> pactStream = pacts.stream().filter(this::matchingProviderName)
                 .filter(this::matchingConsumerName);
 
-        return ConversionUtils.getInteraction(pactStream, state)
-                .orElseThrow(() -> new IllegalStateException(MessageFormat.format("No interaction found for state \"{0}\"", state)));
+        List<Interaction> interactions = ConversionUtils
+                .getInteractions(pactStream, providerState(), interactionDescription()).collect(Collectors.toList());
+        if (interactions.isEmpty()) {
+            throw new IllegalStateException(MessageFormat
+                    .format("No interaction found for description \"{0}\" and state \"{1}\"",
+                            interactionDescription().orElse("<NOT USED>"), providerState().orElse("<NOT USED>")));
+        }
+
+        return interactions;
     }
 
     private boolean matchingProviderName(Pact pact) {
-        return provider()
-                .map(expectedProviderName -> expectedProviderName.equals(pact.getProvider().getName()))
+        return provider().map(expectedProviderName -> expectedProviderName.equals(pact.getProvider().getName()))
                 .orElse(true);
     }
 
     private boolean matchingConsumerName(Pact pact) {
-        return provider()
-                .map(expectedConsumerName -> expectedConsumerName.equals(pact.getConsumer().getName()))
+        return provider().map(expectedConsumerName -> expectedConsumerName.equals(pact.getConsumer().getName()))
                 .orElse(true);
     }
 
     /**
      * Determines the default {@link ResultMatcher}s from the Interaction.
      *
-     * @param interaction
-     *            The interactions to get the matchers from.
+     * @param interaction The interactions to get the matchers from.
      * @return The default {@link ResultMatcher}s.
      */
     protected Set<ResultMatcher> responseMatchers(Interaction interaction) {
@@ -378,8 +392,7 @@ public class PactTestRunner {
     /**
      * Determines the default {@link ResultMatcher}s from the {@link Response}.
      *
-     * @param response
-     *            The {@link Response} to get the matchers from.
+     * @param response The {@link Response} to get the matchers from.
      * @return The default {@link ResultMatcher}s.
      */
     protected Set<ResultMatcher> responseMatchers(Response response) {

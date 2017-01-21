@@ -80,6 +80,12 @@ Get the `MockMvc` configured by Spring and ready to use. The above defined contr
 
 Each test method should be annotated with `@ProviderState` defining the provider state to get the correct consumer - provider interaction from the pacts.
 Alternatively the provider state can be directly set on the rule instead of using the annotation. See
+[Pact Runner API](#pactRule.configure().mockMvc(mockMvc).contextPath("/app")) for more details.
+
+## @InteractionDescription("A request to retrtieve the value of entity 10")
+
+A test method can additionally be annotated with `@InteractionDescription` to select a defined interaction by its description.
+Alternatively the interaction to select can be directly set on the rule instead of using the annotation. See
 [next section](#pactRule.configure().mockMvc(mockMvc).contextPath("/app")) for more details.
 
 ## pactRule.configure().mockMvc(mockMvc).contextPath("/app")
@@ -97,6 +103,7 @@ Following things can optionally be configured:
 * `requestCallback(Consumer<? super MockHttpServletRequestBuilder> requestCallback)` - The request can be modified before it is executed.
 * `responseCallback(Consumer<? super ResultActions> responseCallback)` - Get access to the response before it is validated.
 * `addResultMatchers(ResultMatcher... resultMatchers)` - Provide some additional `ResultMatcher` that will be validated against the response.
+* `interactionDescription(String description)` - If not already specified by the `@InteractionDescription` annotation on the test method it can be directly set with this method. The value set here has precedence over the value from the annotation.
 
 Configurations that are common for all tests within a test class (mostly at least the `mockMvc` configuration) can be put to a Before-Method:
 

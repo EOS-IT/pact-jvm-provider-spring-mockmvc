@@ -1,18 +1,17 @@
 package de.eosit.fx.pact.provider;
 
+import au.com.dius.pact.model.Pact;
+import org.junit.rules.TestRule;
+import org.junit.runner.Description;
+import org.junit.runners.model.Statement;
+import org.springframework.test.web.servlet.MockMvc;
+
 import java.io.File;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-import org.springframework.test.web.servlet.MockMvc;
-
-import au.com.dius.pact.model.Pact;
 
 import static com.google.common.collect.Sets.newHashSet;
 
@@ -86,6 +85,10 @@ public class PactMockMvcRule implements TestRule {
                         runner.providerState(retrieveDefaultProviderState(description).orElse(null));
                     }
 
+                    if (!runner.interactionDescription().isPresent()) {
+                        runner.interactionDescription(retrieveInteractionDescription(description).orElse(null));
+                    }
+
                     runner.run();
                 } finally {
                     runner = null;
@@ -96,7 +99,7 @@ public class PactMockMvcRule implements TestRule {
     }
 
     /**
-     * Retrieves the provider from the {@link ProviderState} annotation on the
+     * Retrieves the provider state from the {@link ProviderState} annotation on the
      * test method.
      *
      * @param description
@@ -107,6 +110,20 @@ public class PactMockMvcRule implements TestRule {
     protected Optional<String> retrieveDefaultProviderState(Description description) {
         ProviderState stateAnnotation = description.getAnnotation(ProviderState.class);
         return Optional.ofNullable(stateAnnotation).map(s -> s.value());
+    }
+
+    /**
+     * Retrieves the interaction description from the {@link InteractionDescription} annotation on the
+     * test method.
+     *
+     * @param description
+     *            The test description.
+     * @return The interaction description if the annotation is present or an empty
+     *         {@link Optional} if not found.
+     */
+    protected Optional<String> retrieveInteractionDescription(Description description) {
+        InteractionDescription annotation = description.getAnnotation(InteractionDescription.class);
+        return Optional.ofNullable(annotation).map(s -> s.value());
     }
 
     /**
