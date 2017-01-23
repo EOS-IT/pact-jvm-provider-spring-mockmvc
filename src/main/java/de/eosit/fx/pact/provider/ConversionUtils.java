@@ -33,7 +33,7 @@ public class ConversionUtils {
     public static Stream<Interaction> getInteractions(Stream<Pact> pactStream, Optional<String> providerState,
             Optional<String> interactionDescription) {
         return pactStream.flatMap(pact -> pact.getInteractions().stream())
-                .filter(interaction -> providerState.map(expectedState -> expectedState.equals(interaction.getProviderState())).orElse(true))
-                .filter(interaction -> interactionDescription.map(expectedDesc -> expectedDesc.equals(interaction.getDescription())).orElse(true));
+                .filter(interaction -> providerState.map(expectedState -> expectedState.equalsIgnoreCase(interaction.getProviderState())).orElse(true))
+                .filter(interaction -> interactionDescription.map(expectedDesc -> expectedDesc.equalsIgnoreCase(interaction.getDescription())).orElse(true));
     }
 }

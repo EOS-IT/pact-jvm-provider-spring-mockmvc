@@ -52,6 +52,17 @@ public class ConversionUtilsTest {
     }
 
     @Test
+    public void getInteractionsByStateAndDescriptionIgnoreCase() {
+        Stream<Interaction> interactions = ConversionUtils.getInteractions(pacts, Optional.of("S1"), Optional.of("D1"));
+        List<Interaction> interactionList = interactions.collect(Collectors.toList());
+        assertEquals(1, interactionList.size());
+        interactionList.forEach(interaction -> {
+            assertEquals("s1", interaction.getProviderState());
+            assertEquals("d1", interaction.getDescription());
+        });
+    }
+
+    @Test
     public void getAllInteractions() {
         Stream<Interaction> interactions = ConversionUtils.getInteractions(pacts, Optional.empty(), Optional.empty());
         assertEquals(3, interactions.count());
