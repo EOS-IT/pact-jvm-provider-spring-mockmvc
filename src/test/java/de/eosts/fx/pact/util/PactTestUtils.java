@@ -1,4 +1,4 @@
-package de.eosit.fx.pact.util;
+package de.eosts.fx.pact.util;
 
 import com.google.common.collect.Lists;
 

@@ -1,4 +1,4 @@
-package de.eosit.fx.pact.provider;
+package de.eosts.fx.pact.provider;
 
 import au.com.dius.pact.model.Pact;
 import org.junit.rules.TestRule;

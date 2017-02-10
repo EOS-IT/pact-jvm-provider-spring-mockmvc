@@ -1,8 +1,8 @@
-package de.eosit.fx.pact.provider;
+package de.eosts.fx.pact.provider;
 
 import au.com.dius.pact.model.Interaction;
 import au.com.dius.pact.model.Pact;
-import de.eosit.fx.pact.util.PactTestUtils;
+import de.eosts.fx.pact.util.PactTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 

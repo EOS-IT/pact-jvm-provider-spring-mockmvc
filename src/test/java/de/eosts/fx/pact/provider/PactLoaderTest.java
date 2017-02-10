@@ -1,6 +1,6 @@
-package de.eosit.fx.pact.provider;
+package de.eosts.fx.pact.provider;
 
-import static de.eosit.fx.pact.util.PactTestUtils.writePactContent;
+import static de.eosts.fx.pact.util.PactTestUtils.writePactContent;
 
 import java.io.File;
 import java.util.List;
@@ -12,7 +12,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import au.com.dius.pact.model.Pact;
-import de.eosit.fx.pact.util.PactTestUtils;
+import de.eosts.fx.pact.util.PactTestUtils;
 import groovy.json.JsonException;
 
 public class PactLoaderTest {

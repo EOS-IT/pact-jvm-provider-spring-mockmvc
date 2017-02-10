@@ -1,4 +1,4 @@
-package de.eosit.fx.pact.provider;
+package de.eosts.fx.pact.provider;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

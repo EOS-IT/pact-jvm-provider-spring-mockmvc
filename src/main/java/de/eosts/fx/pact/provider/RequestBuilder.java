@@ -1,4 +1,4 @@
-package de.eosit.fx.pact.provider;
+package de.eosts.fx.pact.provider;
 
 import java.net.URI;
 import java.util.List;
