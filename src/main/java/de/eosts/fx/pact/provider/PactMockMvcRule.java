@@ -8,11 +8,13 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.File;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newHashSet;
 
 /**
@@ -24,10 +26,8 @@ import static com.google.common.collect.Sets.newHashSet;
  * annotation {@link ProviderState}. If both methods are used in parallel the
  * state configured on the rule has precedence.</li>
  * </ol>
- *
- * <p>
+ * <br />
  * Example of usage:
- *
  * <pre>
  * &#064;RunWith(SpringRunner.class)
  * &#064;WebMvcTest(controllers = MyController.class)
@@ -50,6 +50,8 @@ public class PactMockMvcRule implements TestRule {
 
     private Set<Pact> pacts = newHashSet();
     private PactTestRunner runner = null;
+    private List<Runnable> beforeCallbacks = newArrayList();
+    private List<Runnable> afterCallbacks = newArrayList();
 
     /**
      * Constructs a {@link PactMockMvcRule} without any available {@link Pact}s.
@@ -78,6 +80,7 @@ public class PactMockMvcRule implements TestRule {
             public void evaluate() throws Throwable {
                 runner = new PactTestRunner(pacts);
 
+                beforeCallbacks.forEach(Runnable::run);
                 try {
                     base.evaluate();
 
@@ -91,6 +94,7 @@ public class PactMockMvcRule implements TestRule {
 
                     runner.run();
                 } finally {
+                    afterCallbacks.forEach(Runnable::run);
                     runner = null;
                 }
 
@@ -102,28 +106,26 @@ public class PactMockMvcRule implements TestRule {
      * Retrieves the provider state from the {@link ProviderState} annotation on the
      * test method.
      *
-     * @param description
-     *            The test description.
+     * @param description The test description.
      * @return The provider state if the annotation is present or an empty
-     *         {@link Optional} if not found.
+     * {@link Optional} if not found.
      */
     protected Optional<String> retrieveDefaultProviderState(Description description) {
         ProviderState stateAnnotation = description.getAnnotation(ProviderState.class);
-        return Optional.ofNullable(stateAnnotation).map(s -> s.value());
+        return Optional.ofNullable(stateAnnotation).map(ProviderState::value);
     }
 
     /**
      * Retrieves the interaction description from the {@link InteractionDescription} annotation on the
      * test method.
      *
-     * @param description
-     *            The test description.
+     * @param description The test description.
      * @return The interaction description if the annotation is present or an empty
-     *         {@link Optional} if not found.
+     * {@link Optional} if not found.
      */
     protected Optional<String> retrieveInteractionDescription(Description description) {
         InteractionDescription annotation = description.getAnnotation(InteractionDescription.class);
-        return Optional.ofNullable(annotation).map(s -> s.value());
+        return Optional.ofNullable(annotation).map(InteractionDescription::value);
     }
 
     /**
@@ -141,10 +143,32 @@ public class PactMockMvcRule implements TestRule {
      * {@link PactMockMvcRule}.
      *
      * @return The {@link PactMockMvcRuleBuilder} instance for building the
-     *         rule.
+     * rule.
      */
     public static PactMockMvcRuleBuilder create() {
         return new PactMockMvcRuleBuilder();
+    }
+
+    /**
+     * Adds a callback that runs before the rule is evaluated.
+     */
+    public void addBeforeCallback(Runnable beforeCallback) {
+        this.beforeCallbacks.add(beforeCallback);
+    }
+
+    public void addBeforeCallbacks(List<Runnable> beforeCallbacks) {
+        this.beforeCallbacks.addAll(beforeCallbacks);
+    }
+
+    /**
+     * Adds a callback that runs after the rule is evaluated.
+     */
+    public void addAfterCallback(Runnable afterCallback) {
+        this.afterCallbacks.add(afterCallback);
+    }
+
+    public void addAfterCallbacks(List<Runnable> afterCallbacks) {
+        this.afterCallbacks.addAll(afterCallbacks);
     }
 
     /**
@@ -153,8 +177,10 @@ public class PactMockMvcRule implements TestRule {
      */
     public static class PactMockMvcRuleBuilder {
         private Set<Pact> pacts = new HashSet<>();
-        private Optional<String> consumer = Optional.empty();
-        private Optional<String> provider = Optional.empty();
+        private String consumer;
+        private String provider;
+        private List<Runnable> beforeCallbacks = newArrayList();
+        private List<Runnable> afterCallbacks = newArrayList();
 
         public PactMockMvcRuleBuilder withFile(String pactFile) {
             pacts.add(PactLoader.loadPactByResource(pactFile));
@@ -176,26 +202,40 @@ public class PactMockMvcRule implements TestRule {
             return this;
         }
 
+        public PactMockMvcRuleBuilder withBeforeCallback(Runnable c) {
+            this.beforeCallbacks.add(c);
+            return this;
+        }
+
+        public PactMockMvcRuleBuilder withAfterCallback(Runnable c) {
+            this.afterCallbacks.add(c);
+            return this;
+        }
+
         public PactMockMvcRuleBuilder forConsumer(String consumer) {
-            this.consumer = Optional.ofNullable(consumer);
+            this.consumer = consumer;
             return this;
         }
 
         public PactMockMvcRuleBuilder forProvider(String provider) {
-            this.provider = Optional.ofNullable(provider);
+            this.provider = provider;
             return this;
         }
 
         public PactMockMvcRule build() {
             Stream<Pact> pactStream = pacts.stream();
-            if (provider.isPresent()) {
-                pactStream = pactStream.filter(pact -> provider.get().equals(pact.getProvider().getName()));
+
+            if (provider != null) {
+                pactStream = pactStream.filter(pact -> provider.equals(pact.getProvider().getName()));
             }
-            if (consumer.isPresent()) {
-                pactStream = pactStream.filter(pact -> consumer.get().equals(pact.getConsumer().getName()));
+            if (consumer != null) {
+                pactStream = pactStream.filter(pact -> consumer.equals(pact.getConsumer().getName()));
             }
 
-            return new PactMockMvcRule(pactStream.collect(Collectors.toList()));
+            PactMockMvcRule pactMockMvcRule = new PactMockMvcRule(pactStream.collect(Collectors.toList()));
+            pactMockMvcRule.addBeforeCallbacks(this.beforeCallbacks);
+            pactMockMvcRule.addAfterCallbacks(this.afterCallbacks);
+            return pactMockMvcRule;
         }
     }
 }
