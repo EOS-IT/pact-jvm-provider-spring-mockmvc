@@ -92,3 +92,7 @@ idea {
         downloadJavadoc = true
     }
 }
+
+task wrapper(type: Wrapper) {
+    distributionUrl = "${nexusGradleUrl}"
+}
