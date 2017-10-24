@@ -26,7 +26,7 @@ import static com.google.common.collect.Sets.newHashSet;
  * annotation {@link ProviderState}. If both methods are used in parallel the
  * state configured on the rule has precedence.</li>
  * </ol>
- * <br />
+ * <br>
  * Example of usage:
  * <pre>
  * &#064;RunWith(SpringRunner.class)
