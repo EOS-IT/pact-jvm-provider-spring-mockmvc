@@ -12,7 +12,7 @@ apply plugin: 'idea'
 sourceCompatibility = 1.8
 
 jacoco {
-	toolVersion = "0.7.6.201602180812"
+	toolVersion = "0.7.9"
 }
 
 repositories {
@@ -25,14 +25,14 @@ repositories {
 }
 
 dependencies {
-	compile("au.com.dius:pact-jvm-model:3.3.1")
-	compile("com.google.guava:guava:19.0")
+	compile("au.com.dius:pact-jvm-model:3.5.8")
+	compile("com.google.guava:guava:20.0")
     compile("junit:junit:4.12")
-    compile("org.springframework:spring-test:4.3.3.RELEASE")
-    compile("org.springframework:spring-web:4.3.3.RELEASE")
-    compile("org.springframework:spring-webmvc:4.3.3.RELEASE")
-    compile("javax.servlet:javax.servlet-api:3.1.0")
-    compile("org.codehaus.groovy:groovy-all:2.4.7-indy")
+    compile("org.springframework:spring-test:4.3.12.RELEASE")
+    compile("org.springframework:spring-web:4.3.12.RELEASE")
+    compile("org.springframework:spring-webmvc:4.3.12.RELEASE")
+    compile("javax.servlet:javax.servlet-api:4.0.0")
+    compile("org.codehaus.groovy:groovy-all:2.4.12")
 }
 
 jar {

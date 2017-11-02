@@ -1,18 +1,18 @@
 package de.eosts.fx.pact.provider;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.util.Optional;
-
+import au.com.dius.pact.model.OptionalBody;
+import au.com.dius.pact.model.ProviderState;
+import au.com.dius.pact.model.Request;
+import au.com.dius.pact.model.RequestResponseInteraction;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import au.com.dius.pact.model.OptionalBody;
-import au.com.dius.pact.model.Request;
-import au.com.dius.pact.model.RequestResponseInteraction;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.Optional;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
@@ -40,7 +40,7 @@ public class RequestBuilderTest {
 
     @Before
     public void setUp() throws Exception {
-        interaction = new RequestResponseInteraction("a dummy request", "state");
+        interaction = new RequestResponseInteraction("a dummy request", newArrayList(new ProviderState("state")));
 
         Request request = new Request();
         request.setBody(OptionalBody.nullBody());
